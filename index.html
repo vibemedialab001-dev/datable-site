@@ -48,6 +48,7 @@
     line-height:1.7;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
     word-break:keep-all;overflow-wrap:break-word;
   }
+  html,body{overflow-x:hidden}
   .wrap{max-width:1080px;margin:0 auto;padding:0 32px}
   @media(max-width:680px){.wrap{padding:0 20px}}
 
@@ -120,7 +121,7 @@
     .hero .ko{font-size:21px}.hero p{font-size:15px}}
   @media(max-width:420px){.hero h1{font-size:38px}}
 
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
     margin-top:64px;border-top:1px solid rgba(255,255,255,.14)}
   .stats div{padding:30px 8px 4px;border-right:1px solid rgba(255,255,255,.14)}
   .stats div:last-child{border-right:none}
@@ -149,7 +150,7 @@
   @media(max-width:680px){.sechead .lb{font-size:26px}.sechead h2{font-size:21px}}
 
   /* ── B2 사업 3축 — 화이트 카드 ── */
-  .biz{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .biz{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
   @media(max-width:880px){.biz{grid-template-columns:1fr}}
   .bizc{background:#fff;border:1px solid var(--line);border-radius:4px;padding:34px 30px;transition:.18s}
   .bizc:hover{border-color:var(--accent);box-shadow:0 12px 32px rgba(0,101,255,.08)}
@@ -186,19 +187,23 @@
     display:inline-block;min-width:52px}
   @media(max-width:520px){.tl li .m{display:block;margin-bottom:3px}}
 
-  /* ── B4 클라이언트 로고 그리드 — 그레이 섹션 위 화이트 박스 ── */
-  .cl{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
-  .cl .box{background:#fff;border:1px solid var(--line);border-radius:4px;aspect-ratio:16/9;
-    display:flex;align-items:center;justify-content:center;padding:14px 16px;
+  /* ── B4 클라이언트 로고 그리드 — 그레이 섹션 위 화이트 박스 ──
+     minmax(0,1fr) 필수: Safari가 이미지 고유폭을 min-content로 계산해 가로 오버플로 발생 */
+  .cl{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+  /* 고정 높이 박스 — aspect-ratio 미지원 iOS에서도 균일 (실기기 검증 반영) */
+  .cl .box{background:#fff;border:1px solid var(--line);border-radius:4px;height:96px;
+    min-width:0;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;padding:0 14px;
     transition:.15s}
   .cl .box:hover{transform:translateY(-2px);border-color:var(--line2)}
-  .cl .box img{max-width:72%;max-height:56%;width:auto;height:auto;object-fit:contain}
+  .cl .box img{max-width:70%;max-height:50px;width:auto;height:auto;object-fit:contain;display:block}
   /* 로고 미확보분 임시 표기 */
   .cl .box .tx{font-size:13px;font-weight:700;color:var(--txt);letter-spacing:-.03em;text-align:center;line-height:1.25}
-  @media(max-width:980px){.cl{grid-template-columns:repeat(4,1fr)}}
-  @media(max-width:640px){.cl{grid-template-columns:repeat(3,1fr);gap:9px}
-    .cl .box{padding:10px 11px}.cl .box .tx{font-size:11.5px}}
-  @media(max-width:380px){.cl{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:980px){.cl{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media(max-width:640px){.cl{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .cl .box{height:84px;padding:0 12px}
+    .cl .box img{max-width:62%;max-height:40px}
+    .cl .box .tx{font-size:12px}}
   .clnote{font-size:12.5px;color:var(--faint);margin-top:22px}
 
   /* ── B5 법인정보 ── */
@@ -254,7 +259,7 @@
   .cpanel .cx{margin-left:auto;background:none;border:none;color:var(--faint);font-size:22px;
     cursor:pointer;line-height:1;padding:4px}
   .cpanel .cx:hover{color:#fff}
-  .cpanel form{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .cpanel form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   @media(max-width:680px){.cpanel form{grid-template-columns:1fr}}
   .cpanel .full{grid-column:1/-1}
   .cpanel input,.cpanel textarea{background:#242424;border:1px solid #3a3a3a;border-radius:2px;
