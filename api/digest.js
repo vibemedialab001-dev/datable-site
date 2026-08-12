@@ -21,7 +21,10 @@ export default async function handler(req, res) {
     "&select=type,name,company,email,phone,message,created_at",
     { headers: H });
   const rows = await r.json();
-  if (!Array.isArray(rows) || rows.length === 0) {
+  if (!Array.isArray(rows)) {
+    return res.status(500).json({ error: "db_query_failed", detail: rows, status: r.status });
+  }
+  if (rows.length === 0) {
     return res.json({ sent: false, unread: 0 });
   }
   const lines = rows.map(q =>
