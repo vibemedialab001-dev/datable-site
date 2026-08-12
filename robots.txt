@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://vibemedialab001-dev.github.io/datable-site/sitemap.xml
