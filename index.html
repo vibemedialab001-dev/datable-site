@@ -279,11 +279,12 @@
   .cpanel form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   @media(max-width:680px){.cpanel form{grid-template-columns:1fr}}
   .cpanel .full{grid-column:1/-1}
-  .cpanel input,.cpanel textarea{background:#242424;border:1px solid #3a3a3a;border-radius:2px;
+  .cpanel input,.cpanel textarea,.cpanel select{background:#242424;border:1px solid #3a3a3a;border-radius:2px;
     color:#fff;font-family:inherit;font-size:14px;padding:12px 14px;width:100%;outline:none;
     transition:border-color .15s}
   .cpanel input::placeholder,.cpanel textarea::placeholder{color:#6d6d6d}
-  .cpanel input:focus,.cpanel textarea:focus{border-color:var(--accent)}
+  .cpanel select:invalid{color:#6d6d6d}
+  .cpanel input:focus,.cpanel textarea:focus,.cpanel select:focus{border-color:var(--accent)}
   .cpanel textarea{resize:vertical;min-height:96px}
   .cpanel .cfoot{grid-column:1/-1;display:flex;align-items:center;gap:14px;margin-top:4px;flex-wrap:wrap}
   .cpanel .csend{background:var(--accent);color:#fff;border:none;border-radius:2px;
@@ -435,10 +436,19 @@
       <button class="cx" onclick="closeContact()" aria-label="닫기">×</button>
     </div>
     <form id="cform" method="POST" onsubmit="return sendContact(event)">
+      <select name="type" id="ftype" required>
+        <option value="" selected disabled>문의 유형 *</option>
+        <option>데이터 분석 · 컨설팅</option>
+        <option>AI 전환(AX)</option>
+        <option>브랜드 협업 · 커머스</option>
+        <option>강연 · 교육</option>
+        <option>기타</option>
+      </select>
       <input name="name" placeholder="성함 *" required minlength="2" maxlength="40">
-      <input name="company" placeholder="회사 · 소속" maxlength="60">
+      <input name="company" placeholder="회사 · 소속 *" required minlength="2" maxlength="60">
       <input name="email" type="email" placeholder="회신받을 이메일 *" required maxlength="80">
-      <textarea name="message" class="full" placeholder="문의 내용 * (10자 이상)" required minlength="10" maxlength="2000"></textarea>
+      <input name="phone" type="tel" placeholder="연락처 *" required minlength="9" maxlength="20" pattern="[0-9+\-() ]{9,20}">
+      <textarea name="message" class="full" placeholder="문의 내용 * (30자 이상 구체적으로 적어주세요)" required minlength="30" maxlength="2000"></textarea>
       <!-- 스팸 대비: honeypot (봇만 채움) + 사람 확인(reCAPTCHA)은 전송 단계에서 강제 -->
       <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
       <input type="hidden" name="_template" value="table">
@@ -527,9 +537,12 @@ function sendContact(e){
   if (Date.now() - last < 300000) {
     e.preventDefault(); msg.classList.add("err"); msg.textContent = "잠시 후 다시 시도해 주세요."; return false;
   }
-  /* 스팸 방어 4: 내용 최소 길이 (minlength 미지원 브라우저 겸용) */
-  if (f.message.value.trim().length < 10) {
-    e.preventDefault(); msg.classList.add("err"); msg.textContent = "문의 내용을 10자 이상 적어주세요."; return false;
+  /* 스팸 방어 4: 내용·필수 필드 강화 (minlength 미지원 브라우저 겸용) */
+  if (f.message.value.trim().length < 30) {
+    e.preventDefault(); msg.classList.add("err"); msg.textContent = "문의 내용을 30자 이상 구체적으로 적어주세요."; return false;
+  }
+  if (!f.type.value || f.company.value.trim().length < 2 || f.phone.value.trim().length < 9) {
+    e.preventDefault(); msg.classList.add("err"); msg.textContent = "문의 유형·회사·연락처를 확인해 주세요."; return false;
   }
   /* 스팸 방어 5(핵심): formsubmit 표준 플로우 = 구글 reCAPTCHA 사람 확인 강제.
      수집봇 대비 주소는 런타임 조합, 완료 후 ?sent=1로 복귀 */
