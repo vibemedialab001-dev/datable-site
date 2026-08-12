@@ -118,6 +118,29 @@
 
 <!-- 목록 + 편집 -->
 <div class="wrap" id="editorView" style="display:none">
+  <div style="display:flex;gap:8px;margin-top:34px">
+    <button class="btn" id="tabNotice" onclick="showTab('notice')">공지사항</button>
+    <button class="btn" id="tabInq" onclick="showTab('inq')">문의함</button>
+  </div>
+
+  <!-- 문의함 -->
+  <div id="inqView" style="display:none">
+    <header>
+      <h1>문의함</h1>
+      <span class="sp"></span>
+      <button class="btn sm" onclick="showBlock()">차단 목록</button>
+    </header>
+    <div id="blockView" style="display:none;margin-bottom:28px;background:var(--card);border:1px solid var(--line);border-radius:2px;padding:16px 18px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">차단 목록 (해제하려면 삭제)</div>
+      <div id="blockRows" style="font-size:13px"></div>
+    </div>
+    <table>
+      <thead><tr><th>문의</th><th style="width:100px">일시</th><th style="width:190px"></th></tr></thead>
+      <tbody id="inqRows"></tbody>
+    </table>
+  </div>
+
+  <div id="noticeView">
   <header>
     <h1>공지사항 관리</h1>
     <span class="sp"></span>
@@ -148,6 +171,7 @@
     <thead><tr><th>제목</th><th style="width:110px">게시일</th><th style="width:80px">상태</th><th style="width:150px"></th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
+  </div><!-- /noticeView -->
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -245,7 +269,77 @@ async function delNotice(id){
   if (r.error) { alert("삭제 실패: " + r.error.message); return; }
   loadList();
 }
+
+/* ── 문의함 ── */
+function showTab(t){
+  document.getElementById("noticeView").style.display = (t==="notice") ? "" : "none";
+  document.getElementById("inqView").style.display = (t==="inq") ? "" : "none";
+  document.getElementById("tabNotice").className = "btn" + (t==="notice" ? " pri" : "");
+  document.getElementById("tabInq").className = "btn" + (t==="inq" ? " pri" : "");
+  if (t==="inq") loadInq();
+}
+async function loadInq(){
+  var r = await sb.from("datable_inquiries").select("*").order("created_at", {ascending:false}).limit(200);
+  var tb = document.getElementById("inqRows"); tb.innerHTML = "";
+  if (r.error) { tb.innerHTML = '<tr><td colspan="3" class="empty">불러오기 실패: ' + esc(r.error.message) + '</td></tr>'; return; }
+  if (!r.data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">문의가 없습니다.</td></tr>'; return; }
+  r.data.forEach(function(q){
+    var tr = document.createElement("tr");
+    if (!q.read) tr.style.background = "rgba(0,101,255,.03)";
+    tr.innerHTML =
+      '<td class="ti"><span class="badge">' + esc(q.type||"기타") + '</span><b>' + esc(q.name) + '</b>' +
+      (q.company ? ' · ' + esc(q.company) : '') +
+      '<div style="font-size:12.5px;color:var(--faint);margin-top:3px">' + esc(q.email) + ' · ' + esc(q.phone) + '</div>' +
+      '<div style="font-size:13.5px;color:var(--dim);margin-top:6px;white-space:pre-wrap">' + esc(q.message) + '</div></td>' +
+      '<td class="dt">' + q.created_at.slice(0,10) + '<br>' + q.created_at.slice(11,16) + '</td>' +
+      '<td class="ac">' +
+      (!q.read ? '<button class="btn sm" onclick="readInq(\'' + q.id + '\')">읽음</button>' : '') +
+      '<button class="btn sm dgr" onclick="blockInq(\'' + q.id + '\')">차단</button>' +
+      '<button class="btn sm dgr" onclick="delInq(\'' + q.id + '\')">삭제</button></td>';
+    tb.appendChild(tr);
+  });
+  window._inq = r.data;
+}
+async function readInq(id){
+  await sb.from("datable_inquiries").update({read: true}).eq("id", id);
+  loadInq();
+}
+async function delInq(id){
+  if (!confirm("이 문의를 삭제할까요?")) return;
+  var r = await sb.from("datable_inquiries").delete().eq("id", id);
+  if (r.error) { alert("삭제 실패: " + r.error.message); return; }
+  loadInq();
+}
+async function blockInq(id){
+  var q = (window._inq||[]).find(function(x){return x.id===id;});
+  if (!q) return;
+  if (!confirm(q.email + " / " + q.phone + " 을(를) 차단할까요?\n이후 이 이메일·연락처의 문의는 접수 자체가 거부됩니다.")) return;
+  var r = await sb.from("datable_blocklist").insert({email: q.email, phone: q.phone, note: q.name});
+  if (r.error) { alert("차단 실패: " + r.error.message); return; }
+  await sb.from("datable_inquiries").update({read: true}).eq("id", id);
+  alert("차단되었습니다.");
+  loadInq();
+}
+async function showBlock(){
+  var v = document.getElementById("blockView");
+  if (v.style.display !== "none") { v.style.display = "none"; return; }
+  var r = await sb.from("datable_blocklist").select("*").order("created_at", {ascending:false});
+  var el = document.getElementById("blockRows");
+  el.innerHTML = (r.data && r.data.length)
+    ? r.data.map(function(b){
+        return '<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)">' +
+          '<span>' + esc(b.email) + ' · ' + esc(b.phone) + (b.note ? ' (' + esc(b.note) + ')' : '') + '</span>' +
+          '<button class="btn sm" style="margin-left:auto" onclick="unblock(\'' + b.id + '\')">해제</button></div>';
+      }).join("")
+    : '<div style="color:var(--faint)">차단된 항목이 없습니다.</div>';
+  v.style.display = "";
+}
+async function unblock(id){
+  await sb.from("datable_blocklist").delete().eq("id", id);
+  showBlock(); showBlock();
+}
 refreshUI();
+showTab("notice");
 </script>
 </body>
 </html>
