@@ -562,14 +562,7 @@ function sendContact(e){
       msg.classList.add("ok"); msg.textContent = "접수되었습니다. 빠르게 회신드리겠습니다.";
       f.reset();
       setTimeout(closeContact, 2400);
-      /* 참고용 알림 메일 (실패해도 무시 — 관리 본체는 DB) */
-      fetch("https://formsubmit.co/ajax/664ec6a478c2bee2c0e5af9280a8f15f", {
-        method: "POST",
-        headers: {"Content-Type": "application/json", "Accept": "application/json"},
-        body: JSON.stringify({ _subject: "[datable.co.kr 새 문의] " + row.name,
-          유형: row.type, 성함: row.name, 회사: row.company, 이메일: row.email,
-          연락처: row.phone, 내용: row.message })
-      }).catch(function(){});
+      /* 알림은 매건 발송하지 않음 — 매일 09:00 다이제스트(api/digest)가 미읽음 존재 시에만 발송 */
     } else {
       msg.classList.add("err"); msg.textContent = "지금은 접수할 수 없습니다. 잠시 후 다시 시도해 주세요.";
     }
