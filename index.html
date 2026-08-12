@@ -416,17 +416,21 @@
       </div>
       <button class="cx" onclick="closeContact()" aria-label="닫기">×</button>
     </div>
-    <form id="cform" onsubmit="return sendContact(event)">
-      <input name="name" placeholder="성함 *" required maxlength="40">
+    <form id="cform" method="POST" onsubmit="return sendContact(event)">
+      <input name="name" placeholder="성함 *" required minlength="2" maxlength="40">
       <input name="company" placeholder="회사 · 소속" maxlength="60">
       <input name="email" type="email" placeholder="회신받을 이메일 *" required maxlength="80">
-      <textarea name="message" class="full" placeholder="문의 내용 *" required maxlength="2000"></textarea>
-      <!-- 스팸 대비: honeypot (봇만 채움) -->
+      <textarea name="message" class="full" placeholder="문의 내용 * (10자 이상)" required minlength="10" maxlength="2000"></textarea>
+      <!-- 스팸 대비: honeypot (봇만 채움) + 사람 확인(reCAPTCHA)은 전송 단계에서 강제 -->
       <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_subject" value="[datable.co.kr 문의]">
+      <input type="hidden" name="_next" id="cnext" value="">
       <div class="cfoot">
         <button class="csend" id="csend" type="submit">보내기</button>
         <span class="cmsg" id="cmsg"></span>
       </div>
+      <div class="cmsg full" style="margin-top:2px">전송 시 로봇 방지 확인(reCAPTCHA)을 거칩니다.</div>
     </form>
   </div>
 </div>
@@ -493,46 +497,41 @@ function closeContact(){
 document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeContact(); });
 
 function sendContact(e){
-  e.preventDefault();
   var f = document.getElementById("cform");
   var msg = document.getElementById("cmsg");
-  var btn = document.getElementById("csend");
   msg.className = "cmsg";
   /* 스팸 방어 1: honeypot */
-  if (f._honey.value) { msg.textContent = "전송할 수 없습니다."; return false; }
+  if (f._honey.value) { e.preventDefault(); msg.textContent = "전송할 수 없습니다."; return false; }
   /* 스팸 방어 2: 패널 연 뒤 4초 미만 즉시 제출 = 봇 */
   if (Date.now() - _copen < 4000) {
-    msg.classList.add("err"); msg.textContent = "잠시 후 다시 눌러주세요."; return false;
+    e.preventDefault(); msg.classList.add("err"); msg.textContent = "잠시 후 다시 눌러주세요."; return false;
   }
-  /* 스팸 방어 3: 60초 쿨다운 */
+  /* 스팸 방어 3: 5분 쿨다운 (장난성 연속 제출 완화) */
   var last = +(localStorage.getItem("dtb_last_contact") || 0);
-  if (Date.now() - last < 60000) {
-    msg.classList.add("err"); msg.textContent = "잠시 후 다시 시도해 주세요."; return false;
+  if (Date.now() - last < 300000) {
+    e.preventDefault(); msg.classList.add("err"); msg.textContent = "잠시 후 다시 시도해 주세요."; return false;
   }
-  btn.disabled = true; msg.textContent = "전송 중…";
-  /* 수집봇 대비: 주소를 소스에 평문으로 두지 않고 런타임 조합 */
+  /* 스팸 방어 4: 내용 최소 길이 (minlength 미지원 브라우저 겸용) */
+  if (f.message.value.trim().length < 10) {
+    e.preventDefault(); msg.classList.add("err"); msg.textContent = "문의 내용을 10자 이상 적어주세요."; return false;
+  }
+  /* 스팸 방어 5(핵심): formsubmit 표준 플로우 = 구글 reCAPTCHA 사람 확인 강제.
+     수집봇 대비 주소는 런타임 조합, 완료 후 ?sent=1로 복귀 */
   var _ep = ["con", "tact", "@", "data", "ble.co", ".kr"].join("");
-  fetch("https://formsubmit.co/ajax/" + _ep, {
-    method: "POST",
-    headers: {"Content-Type": "application/json", "Accept": "application/json"},
-    body: JSON.stringify({
-      name: f.name.value, company: f.company.value, email: f.email.value,
-      message: f.message.value,
-      _subject: "[datable.co.kr 문의] " + f.name.value,
-      _template: "table"
-    })
-  }).then(function(r){ return r.json(); }).then(function(d){
-    if (d.success === "true" || d.success === true) {
-      localStorage.setItem("dtb_last_contact", Date.now());
-      msg.classList.add("ok"); msg.textContent = "접수되었습니다. 빠르게 회신드리겠습니다.";
-      f.reset();
-      setTimeout(closeContact, 2200);
-    } else { throw new Error(d.message || "fail"); }
-  }).catch(function(){
-    msg.classList.add("err");
-    msg.textContent = "전송에 실패했습니다. 우측 '메일로 직접 보내기'를 이용해 주세요.";
-  }).finally(function(){ btn.disabled = false; });
-  return false;
+  f.action = "https://formsubmit.co/" + _ep;
+  document.getElementById("cnext").value = location.origin + location.pathname + "?sent=1";
+  localStorage.setItem("dtb_last_contact", Date.now());
+  return true; /* 표준 POST → reCAPTCHA 페이지 경유 */
+}
+/* 전송 완료 복귀 시 안내 */
+if (location.search.indexOf("sent=1") > -1) {
+  window.addEventListener("DOMContentLoaded", function(){
+    openContact();
+    var msg = document.getElementById("cmsg");
+    msg.className = "cmsg ok"; msg.textContent = "접수되었습니다. 빠르게 회신드리겠습니다.";
+    setTimeout(closeContact, 2600);
+    history.replaceState(null, "", location.pathname);
+  });
 }
 </script>
 </body>
