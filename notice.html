@@ -109,19 +109,8 @@
     <h1>공지사항</h1>
   </header>
 
-  <ul class="list">
-    <li><a href="#" onclick="show('detail');return false">
-      <span class="ti"><span class="badge">주주총회</span>임시주주총회 소집통지</span>
-      <span class="dt">YYYY. MM. DD.</span>
-    </a></li>
-    <li><a href="#" onclick="return false">
-      <span class="ti">본점 소재지 이전 안내</span>
-      <span class="dt">YYYY. MM. DD.</span>
-    </a></li>
-    <li><a href="#" onclick="return false">
-      <span class="ti"><span class="badge">주주총회</span>정기주주총회 결과 공고</span>
-      <span class="dt">YYYY. MM. DD.</span>
-    </a></li>
+  <ul class="list" id="nlist">
+    <li style="padding:34px 4px;color:var(--faint);font-size:14px">불러오는 중…</li>
   </ul>
 </div>
 
@@ -133,39 +122,10 @@
 
   <div class="detail">
     <div class="dh">
-      <h2>임시주주총회 소집통지</h2>
-      <div class="dm">게시일 YYYY. MM. DD.</div>
+      <h2 id="dtitle"></h2>
+      <div class="dm" id="ddate"></div>
     </div>
-
-    <div class="body">
-      <p>
-        주식회사 데이터블은 <b>정관 제24조</b>에 따라 아래와 같이 임시주주총회를
-        소집하오니 참석하여 주시기 바랍니다.
-      </p>
-
-      <div class="box">
-        <dl>
-          <dt>일 시</dt>
-          <dd>YYYY년 M월 D일 (요일) 오전 O시</dd>
-          <dt>장 소</dt>
-          <dd>본점 회의실</dd>
-          <dt>목적사항</dt>
-          <dd>제1호 의안 — 정관 일부 변경의 건 (사업목적 추가)</dd>
-          <dt>참석방법</dt>
-          <dd>직접 참석 또는 위임장에 의한 대리 참석</dd>
-        </dl>
-      </div>
-
-      <p>
-        ※ 대리 참석 시 위임장에 기명날인하여 회의 전 제출하여 주시기 바랍니다.
-      </p>
-
-      <div class="sign">
-        YYYY년 M월 D일
-        <b>주식회사 데이터블</b>
-        대표이사 이 종 대
-      </div>
-    </div>
+    <div class="body" id="dbody"></div>
   </div>
 </div>
 
@@ -173,12 +133,56 @@
   <a href="index.html">← 회사소개로 돌아가기</a>
 </div></footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+var sb = window.supabase.createClient(
+  "https://xenaodixstkagcvlyuri.supabase.co",
+  "sb_publishable_lPZNpaQ-wI2vzDVc58QKYw_0Ll_gAM6");
+var _notices = [];
+
 function show(v){
   document.getElementById('v-list').style.display   = (v==='list')   ? '' : 'none';
   document.getElementById('v-detail').style.display = (v==='detail') ? '' : 'none';
   window.scrollTo(0,0);
 }
+function esc(s){var d=document.createElement("div");d.textContent=s||"";return d.innerHTML;}
+function fmtDate(d){ return (d||"").replace(/-/g, ". ") + "."; }
+/* 본문: 이스케이프 후 **굵게**·줄바꿈만 반영 (편집자 입력 텍스트) */
+function renderBody(t){
+  return "<p>" + esc(t)
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/\n{2,}/g, "</p><p>")
+    .replace(/\n/g, "<br>") + "</p>";
+}
+function openDetail(i){
+  var n = _notices[i];
+  if (!n) return;
+  document.getElementById("dtitle").innerHTML =
+    (n.badge ? '<span class="badge">' + esc(n.badge) + '</span>' : '') + esc(n.title);
+  document.getElementById("ddate").textContent = "게시일 " + fmtDate(n.posted_at);
+  document.getElementById("dbody").innerHTML = renderBody(n.body_html);
+  show('detail');
+}
+(async function(){
+  var ul = document.getElementById("nlist");
+  var r = await sb.from("datable_notices")
+    .select("title,badge,body_html,posted_at")
+    .eq("published", true)
+    .order("posted_at", {ascending:false});
+  ul.innerHTML = "";
+  if (r.error || !r.data || !r.data.length) {
+    ul.innerHTML = '<li style="padding:34px 4px;color:var(--faint);font-size:14px">등록된 공지사항이 없습니다.</li>';
+    return;
+  }
+  _notices = r.data;
+  r.data.forEach(function(n, i){
+    var li = document.createElement("li");
+    li.innerHTML = '<a href="#" onclick="openDetail(' + i + ');return false">' +
+      '<span class="ti">' + (n.badge ? '<span class="badge">' + esc(n.badge) + '</span>' : '') + esc(n.title) + '</span>' +
+      '<span class="dt">' + fmtDate(n.posted_at) + '</span></a>';
+    ul.appendChild(li);
+  });
+})();
 </script>
 </body>
 </html>
