@@ -214,7 +214,7 @@ function editNotice(id){
   document.getElementById("fpub").checked = n.published;
   showForm();
 }
-function showForm(){ document.getElementById("form").style.display=""; document.getElementById("fmsg").textContent=""; window.scrollTo(0,0); }
+function showForm(){ document.getElementById("form").style.display="block"; document.getElementById("fmsg").textContent=""; window.scrollTo(0,0); }
 function hideForm(){ document.getElementById("form").style.display="none"; editingId=null; }
 
 async function saveNotice(){
