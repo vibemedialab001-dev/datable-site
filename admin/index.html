@@ -129,8 +129,13 @@
     <header>
       <h1>문의함</h1>
       <span class="sp"></span>
+      <button class="btn sm pri" id="fInbox" onclick="setInqMode(false)">받은 문의</button>
+      <button class="btn sm" id="fJail" onclick="setInqMode(true)">스팸함</button>
       <button class="btn sm" onclick="showBlock()">차단 목록</button>
     </header>
+    <div id="jailNote" style="display:none;font-size:12.5px;color:var(--faint);margin:-8px 0 14px">
+      차단 규칙에 걸린 제출 보관함입니다. 30일 지난 항목은 자동 삭제됩니다. 오차단이면 "정상 복구"를 누르세요.
+    </div>
     <div id="blockView" style="display:none;margin-bottom:28px;background:var(--card);border:1px solid var(--line);border-radius:2px;padding:16px 18px">
       <div style="font-size:13px;font-weight:700;margin-bottom:8px">차단 목록 (해제하려면 삭제)</div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -284,27 +289,45 @@ function showTab(t){
   document.getElementById("tabInq").className = "btn" + (t==="inq" ? " pri" : "");
   if (t==="inq") loadInq();
 }
+var _jail = false;
+function setInqMode(jail){
+  _jail = jail;
+  document.getElementById("fInbox").className = "btn sm" + (jail ? "" : " pri");
+  document.getElementById("fJail").className = "btn sm" + (jail ? " pri" : "");
+  document.getElementById("jailNote").style.display = jail ? "" : "none";
+  loadInq();
+}
 async function loadInq(){
-  var r = await sb.from("datable_inquiries").select("*").order("created_at", {ascending:false}).limit(200);
+  var r = await sb.from("datable_inquiries").select("*").eq("blocked", _jail)
+    .order("created_at", {ascending:false}).limit(200);
   var tb = document.getElementById("inqRows"); tb.innerHTML = "";
   if (r.error) { tb.innerHTML = '<tr><td colspan="3" class="empty">불러오기 실패: ' + esc(r.error.message) + '</td></tr>'; return; }
-  if (!r.data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">문의가 없습니다.</td></tr>'; return; }
+  if (!r.data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">' + (_jail ? "스팸함이 비어 있습니다." : "문의가 없습니다.") + '</td></tr>'; return; }
   r.data.forEach(function(q){
     var tr = document.createElement("tr");
-    if (!q.read) tr.style.background = "rgba(0,101,255,.03)";
+    if (!_jail && !q.read) tr.style.background = "rgba(0,101,255,.03)";
+    var actions = _jail
+      ? '<button class="btn sm" onclick="restoreInq(\'' + q.id + '\')">정상 복구</button>' +
+        '<button class="btn sm dgr" onclick="delInq(\'' + q.id + '\')">삭제</button>'
+      : (!q.read ? '<button class="btn sm" onclick="readInq(\'' + q.id + '\')">읽음</button>' : '') +
+        '<button class="btn sm dgr" onclick="blockInq(\'' + q.id + '\')">차단</button>' +
+        '<button class="btn sm dgr" onclick="delInq(\'' + q.id + '\')">삭제</button>';
     tr.innerHTML =
       '<td class="ti"><span class="badge">' + esc(q.type||"기타") + '</span><b>' + esc(q.name) + '</b>' +
       (q.company ? ' · ' + esc(q.company) : '') +
       '<div style="font-size:12.5px;color:var(--faint);margin-top:3px">' + esc(q.email) + ' · ' + esc(q.phone) + '</div>' +
       '<div style="font-size:13.5px;color:var(--dim);margin-top:6px;white-space:pre-wrap">' + esc(q.message) + '</div></td>' +
       '<td class="dt">' + q.created_at.slice(0,10) + '<br>' + q.created_at.slice(11,16) + '</td>' +
-      '<td class="ac">' +
-      (!q.read ? '<button class="btn sm" onclick="readInq(\'' + q.id + '\')">읽음</button>' : '') +
-      '<button class="btn sm dgr" onclick="blockInq(\'' + q.id + '\')">차단</button>' +
-      '<button class="btn sm dgr" onclick="delInq(\'' + q.id + '\')">삭제</button></td>';
+      '<td class="ac">' + actions + '</td>';
     tb.appendChild(tr);
   });
   window._inq = r.data;
+}
+async function restoreInq(id){
+  var r = await sb.from("datable_inquiries").update({blocked: false, read: false}).eq("id", id);
+  if (r.error) { alert("복구 실패: " + r.error.message); return; }
+  alert("받은 문의로 복구되었습니다. 필요하면 차단 목록에서 해당 규칙도 해제하세요.");
+  loadInq();
 }
 async function readInq(id){
   await sb.from("datable_inquiries").update({read: true}).eq("id", id);
