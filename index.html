@@ -412,7 +412,7 @@
     <div class="ch">
       <div>
         <div class="ct">문의하기</div>
-        <div class="cs">남겨주시면 contact@datable.co.kr로 전달됩니다</div>
+        <div class="cs">남겨주시면 담당자가 빠르게 회신드립니다</div>
       </div>
       <button class="cx" onclick="closeContact()" aria-label="닫기">×</button>
     </div>
@@ -426,14 +426,13 @@
       <div class="cfoot">
         <button class="csend" id="csend" type="submit">보내기</button>
         <span class="cmsg" id="cmsg"></span>
-        <a class="cmail" href="mailto:contact@datable.co.kr">메일로 직접 보내기</a>
       </div>
     </form>
   </div>
 </div>
 
 <footer><div class="wrap"><div class="fl">
-  <span>주식회사 데이터블 · 서울특별시 금천구 디지털로 178 · contact@datable.co.kr</span>
+  <span>주식회사 데이터블 · 서울특별시 금천구 디지털로 178</span>
   <span class="sp"></span>
   <a href="notice.html">공지사항</a>
 </div></div></footer>
@@ -511,7 +510,9 @@ function sendContact(e){
     msg.classList.add("err"); msg.textContent = "잠시 후 다시 시도해 주세요."; return false;
   }
   btn.disabled = true; msg.textContent = "전송 중…";
-  fetch("https://formsubmit.co/ajax/contact@datable.co.kr", {
+  /* 수집봇 대비: 주소를 소스에 평문으로 두지 않고 런타임 조합 */
+  var _ep = ["con", "tact", "@", "data", "ble.co", ".kr"].join("");
+  fetch("https://formsubmit.co/ajax/" + _ep, {
     method: "POST",
     headers: {"Content-Type": "application/json", "Accept": "application/json"},
     body: JSON.stringify({
